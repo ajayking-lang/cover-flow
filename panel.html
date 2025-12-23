@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Device Control Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="templatemo-3d-coverflow.css" rel="stylesheet">
+    <style>
+        body {
+            background: #050816;
+            color: #f7fafc;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .panel-wrapper {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 24px;
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 40px 80px rgba(15, 23, 42, 0.75);
+        }
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+        .subtitle {
+            color: #a0aec0;
+            margin-bottom: 24px;
+        }
+        .devices-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+        .devices-table thead {
+            background: rgba(30, 64, 175, 0.4);
+        }
+        .devices-table th,
+        .devices-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(75, 85, 99, 0.6);
+            font-size: 14px;
+        }
+        .devices-table tbody tr:hover {
+            background: rgba(55, 65, 81, 0.5);
+            cursor: pointer;
+        }
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            margin-right: 6px;
+        }
+        .status-online {
+            background: #22c55e;
+        }
+        .status-offline {
+            background: #ef4444;
+        }
+        .status-unknown {
+            background: #a0aec0;
+        }
+        .credits {
+            font-weight: 600;
+        }
+        .credits-low {
+            color: #f97316;
+        }
+        .credits-zero {
+            color: #ef4444;
+        }
+        .flex {
+            display: flex;
+            gap: 24px;
+            margin-top: 24px;
+        }
+        .left, .right {
+            flex: 1;
+            min-width: 0;
+        }
+        .card {
+            background: rgba(15, 23, 42, 0.9);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(55, 65, 81, 0.8);
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        .field-row {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .label {
+            color: #9ca3af;
+        }
+        .value {
+            font-weight: 500;
+        }
+        .messages-list {
+            max-height: 260px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+        .msg {
+            padding: 6px 8px;
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+        .msg-out {
+            background: rgba(37, 99, 235, 0.25);
+        }
+        .msg-in {
+            background: rgba(16, 185, 129, 0.25);
+        }
+        .msg-meta {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        input[type="number"] {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(75, 85, 99, 1);
+            background: rgba(15, 23, 42, 1);
+            color: #e5e7eb;
+            width: 100px;
+        }
+        button {
+            border: none;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: #f9fafb;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+        .toggle {
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(75, 85, 99, 1);
+            background: rgba(17, 24, 39, 1);
+            color: #e5e7eb;
+            font-size: 12px;
+        }
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 12px;
+        }
+        .status-ok {
+            color: #22c55e;
+        }
+        .status-error {
+            color: #ef4444;
+        }
+        .badge {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            border: 1px solid rgba(55, 65, 81, 1);
+        }
+        @media (max-width: 900px) {
+            .flex {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="panel-wrapper">
+    <h1>Firebase Device Panel</h1>
+    <p class="subtitle">
+        Shows devices from Realtime Database path <code>/devices</code> and auto-refreshes every second.
+    </p>
+
+    <table class="devices-table" id="devicesTable">
+        <thead>
+        <tr>
+            <th>Device ID</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Credits</th>
+            <th>SMS Allowed</th>
+        </tr>
+        </thead>
+        <tbody id="devicesBody">
+        <tr><td colspan="6">Loading...</td></tr>
+        </tbody>
+    </table>
+
+    <div class="flex">
+        <div class="left">
+            <div class="card">
+                <h2>Selected Device</h2>
+                <div id="noDevice">Click a device row to view details.</div>
+                <div id="deviceDetails" style="display:none;">
+                    <div class="field-row">
+                        <span class="label">Device ID: </span>
+                        <span class="value" id="dId"></span>
+                    </div>
+                    <div class="field-row">
+                        <span class="label">Name: </span>
+                        <span class="value" id="dName"></span>
+                    </div>
+                    <div class="field-row">
+                        <span class="label">Phone: </span>
+                        <span class="value" id="dPhone"></span>
+                    </div>
+                    <div class="field-row">
+                        <span class="label">Last Seen: </span>
+                        <span class="value" id="dLastSeen"></span>
+                    </div>
+                    <div class="field-row">
+                        <span class="label">Credits: </span>
+                        <span class="value" id="dCredits"></span>
+                    </div>
+                    <div class="field-row">
+                        <span class="label">SMS Allowed: </span>
+                        <span class="value" id="dSmsAllowed"></span>
+                    </div>
+
+                    <div class="controls-row">
+                        <input type="number" id="creditsAmount" placeholder="Credits" value="10">
+                        <button id="addCreditsBtn">Add Credits</button>
+                        <button id="toggleSmsBtn" class="toggle"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right">
+            <div class="card">
+                <h2>Messages</h2>
+                <div class="messages-list" id="messagesList">
+                    <div style="color:#9ca3af;font-size:13px;">No device selected.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div>
+            Status:
+            <span id="statusText" class="status-ok">Idle</span>
+        </div>
+        <div>
+            Auto refresh: <span class="badge">1s</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    const backendUrl = 'firebase_backend.php';
+    let pollTimer = null;
+    let currentDevices = {};
+    let selectedId = null;
+    let isUpdating = false;
+
+    function formatLastSeen(ts) {
+        if (!ts) return 'Unknown';
+        if (String(ts).length === 13) {
+            const d = new Date(Number(ts));
+            return d.toLocaleString();
+        }
+        return ts;
+    }
+
+    function computeStatus(device) {
+        if (!device || !device.lastSeen) return 'unknown';
+        const now = Date.now();
+        const ts = Number(device.lastSeen);
+        if (isNaN(ts)) return 'unknown';
+        const diff = now - ts;
+        return diff < 60 * 1000 ? 'online' : 'offline';
+    }
+
+    async function fetchDevices() {
+        if (isUpdating) return;
+        try {
+            const res = await fetch(backendUrl + '?action=list_devices');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json() || {};
+            currentDevices = data || {};
+            renderDevices();
+            document.getElementById('statusText').textContent = 'Live';
+            document.getElementById('statusText').className = 'status-ok';
+        } catch (e) {
+            document.getElementById('statusText').textContent = 'Error: ' + e.message;
+            document.getElementById('statusText').className = 'status-error';
+        }
+    }
+
+    function renderDevices() {
+        const tbody = document.getElementById('devicesBody');
+        tbody.innerHTML = '';
+        const entries = Object.entries(currentDevices);
+        if (!entries.length) {
+            tbody.innerHTML = '<tr><td colspan="6">No devices found at path /devices</td></tr>';
+            return;
+        }
+        for (const [id, device] of entries) {
+            const tr = document.createElement('tr');
+            tr.dataset.id = id;
+            const status = computeStatus(device);
+            let statusClass = 'status-unknown', statusLabel = 'Unknown';
+            if (status === 'online') { statusClass = 'status-online'; statusLabel = 'Online'; }
+            if (status === 'offline') { statusClass = 'status-offline'; statusLabel = 'Offline'; }
+
+            const credits = Number(device.credits || 0);
+            let creditsClass = 'credits';
+            if (credits === 0) creditsClass += ' credits-zero';
+            else if (credits < 5) creditsClass += ' credits-low';
+
+            tr.innerHTML = `
+                <td>${id}</td>
+                <td>${device.name || ''}</td>
+                <td>${device.phoneNumber || ''}</td>
+                <td>
+                    <span class="status-dot ${statusClass}"></span>${statusLabel}
+                </td>
+                <td class="${creditsClass}">${credits}</td>
+                <td>${device.smsAllowed ? 'Yes' : 'No'}</td>
+            `;
+            tr.addEventListener('click', () => selectDevice(id));
+            tbody.appendChild(tr);
+        }
+        if (selectedId && !currentDevices[selectedId]) {
+            clearSelection();
+        } else if (!selectedId && entries.length) {
+            selectDevice(entries[0][0]);
+        }
+    }
+
+    function clearSelection() {
+        selectedId = null;
+        document.getElementById('deviceDetails').style.display = 'none';
+        document.getElementById('noDevice').style.display = 'block';
+        document.getElementById('messagesList').innerHTML =
+            '<div style="color:#9ca3af;font-size:13px;">No device selected.</div>';
+    }
+
+    function selectDevice(id) {
+        selectedId = id;
+        const device = currentDevices[id];
+        if (!device) {
+            clearSelection();
+            return;
+        }
+        document.getElementById('noDevice').style.display = 'none';
+        document.getElementById('deviceDetails').style.display = 'block';
+
+        document.getElementById('dId').textContent = id;
+        document.getElementById('dName').textContent = device.name || '';
+        document.getElementById('dPhone').textContent = device.phoneNumber || '';
+        document.getElementById('dLastSeen').textContent = formatLastSeen(device.lastSeen);
+        document.getElementById('dCredits').textContent = device.credits || 0;
+        document.getElementById('dSmsAllowed').textContent = device.smsAllowed ? 'Yes' : 'No';
+
+        const toggleBtn = document.getElementById('toggleSmsBtn');
+        toggleBtn.textContent = device.smsAllowed ? 'Disable SMS' : 'Enable SMS';
+
+        renderMessages(device.messages || {});
+    }
+
+    function renderMessages(messages) {
+        const container = document.getElementById('messagesList');
+        container.innerHTML = '';
+        const entries = Object.entries(messages);
+        if (!entries.length) {
+            container.innerHTML = '<div style="color:#9ca3af;font-size:13px;">No messages.</div>';
+            return;
+        }
+        // Newest first
+        entries.sort((a, b) => {
+            const ta = Number(a[1].timestamp || 0);
+            const tb = Number(b[1].timestamp || 0);
+            return tb - ta;
+        });
+        for (const [mid, msg] of entries) {
+            const div = document.createElement('div');
+            const cls = msg.direction === 'out' ? 'msg msg-out' : 'msg msg-in';
+            div.className = cls;
+            const time = msg.timestamp ? new Date(Number(msg.timestamp)).toLocaleString() : '';
+            div.innerHTML = `
+                <div>${msg.body || ''}</div>
+                <div class="msg-meta">${time} • ${msg.direction || ''}</div>
+            `;
+            container.appendChild(div);
+        }
+    }
+
+    async function addCredits() {
+        if (!selectedId) return;
+        const amountInput = document.getElementById('creditsAmount');
+        const amount = Number(amountInput.value || 0);
+        if (!amount) return;
+        isUpdating = true;
+        document.getElementById('addCreditsBtn').disabled = true;
+        document.getElementById('statusText').textContent = 'Updating credits...';
+        try {
+            const res = await fetch(backendUrl + '?action=add_sms_credits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ device_id: selectedId, amount: amount })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            await fetchDevices();
+            selectDevice(selectedId);
+            document.getElementById('statusText').textContent = 'Credits updated';
+            document.getElementById('statusText').className = 'status-ok';
+        } catch (e) {
+            document.getElementById('statusText').textContent = 'Error: ' + e.message;
+            document.getElementById('statusText').className = 'status-error';
+        } finally {
+            isUpdating = false;
+            document.getElementById('addCreditsBtn').disabled = false;
+        }
+    }
+
+    async function toggleSms() {
+        if (!selectedId) return;
+        const device = currentDevices[selectedId] || {};
+        const newValue = !device.smsAllowed;
+        isUpdating = true;
+        document.getElementById('toggleSmsBtn').disabled = true;
+        document.getElementById('statusText').textContent = 'Updating SMS permission...';
+        try {
+            const res = await fetch(backendUrl + '?action=update_device', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    device_id: selectedId,
+                    fields: { smsAllowed: newValue }
+                })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            await fetchDevices();
+            selectDevice(selectedId);
+            document.getElementById('statusText').textContent = 'SMS permission updated';
+            document.getElementById('statusText').className = 'status-ok';
+        } catch (e) {
+            document.getElementById('statusText').textContent = 'Error: ' + e.message;
+            document.getElementById('statusText').className = 'status-error';
+        } finally {
+            isUpdating = false;
+            document.getElementById('toggleSmsBtn').disabled = false;
+        }
+    }
+
+    document.getElementById('addCreditsBtn').addEventListener('click', addCredits);
+    document.getElementById('toggleSmsBtn').addEventListener('click', toggleSms);
+
+    // Start 1s polling
+    fetchDevices();
+    pollTimer = setInterval(fetchDevices, 1000);
+</script>
+</body>
+</html>
